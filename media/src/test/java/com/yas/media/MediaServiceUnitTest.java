@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
@@ -24,9 +25,12 @@ import com.yas.media.service.MediaServiceImpl;
 import com.yas.media.viewmodel.MediaPostVm;
 import com.yas.media.viewmodel.MediaVm;
 import com.yas.media.viewmodel.NoFileMediaVm;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.http.MediaType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -274,5 +278,73 @@ class MediaServiceUnitTest {
         return media;
     }
 
+    // ============================================================
+    // Unit Test bổ sung — tăng coverage (Yêu cầu 7a)
+    // ============================================================
+
+    /**
+     * getFile(): Media tồn tại VÀ fileName khớp (case-insensitive)
+     * → trả về InputStream + MediaType đúng.
+     */
+    @Test
+    void getFile_whenMediaFoundAndFileNameMatch_thenReturnContentAndMediaType() {
+        InputStream mockStream = new ByteArrayInputStream("fake-bytes".getBytes());
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        when(fileSystemRepository.getFile(media.getFilePath())).thenReturn(mockStream);
+
+        // media.fileName = "file" (setUp), truyền đúng
+        MediaDto result = mediaService.getFile(1L, "file");
+
+        assertNotNull(result);
+        assertEquals(mockStream, result.getContent());
+        assertEquals(MediaType.IMAGE_JPEG, result.getMediaType());
+    }
+
+    /**
+     * getFile(): Media tồn tại NHƯNG fileName khác hoàn toàn
+     * → trả về MediaDto rỗng (content = null, mediaType = null).
+     */
+    @Test
+    void getFile_whenMediaFoundButFileNameDifferent_thenReturnEmptyDto() {
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+
+        MediaDto result = mediaService.getFile(1L, "wrong-name");
+
+        assertNotNull(result);
+        assertNull(result.getContent());
+        assertNull(result.getMediaType());
+    }
+
+    /**
+     * getMediaByIds(): danh sách id rỗng → trả về list rỗng, không lỗi.
+     */
+    @Test
+    void getMediaByIds_whenEmptyIdList_thenReturnEmptyList() {
+        when(mediaRepository.findAllById(List.of())).thenReturn(List.of());
+
+        List<MediaVm> result = mediaService.getMediaByIds(List.of());
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    /**
+     * saveMedia(): media type là "image/webp"
+     * → fileName override và mediaType được lưu đúng.
+     */
+    @Test
+    void saveMedia_whenTypeWEBP_thenSaveSuccessWithCorrectMediaType() {
+        var multipartFile = new MockMultipartFile(
+            "file", "photo.webp", "image/webp", new byte[]{});
+        MediaPostVm mediaPostVm = new MediaPostVm("gallery", multipartFile, "my-photo");
+        when(mediaRepository.save(any(Media.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Media saved = mediaService.saveMedia(mediaPostVm);
+
+        assertNotNull(saved);
+        assertEquals("gallery", saved.getCaption());
+        assertEquals("my-photo", saved.getFileName());
+        assertEquals("image/webp", saved.getMediaType());
+    }
 
 }

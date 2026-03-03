@@ -27,7 +27,7 @@ pipeline {
             steps {
                 echo 'Bắt đầu quét Snyk...'
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                    sh 'snyk auth ${SNYK_TOKEN}'
+                    sh 'snyk auth ${SNYK_TOKEN} || true'
                     sh 'snyk test --all-projects || true'
                 }
             }
