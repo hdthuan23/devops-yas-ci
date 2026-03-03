@@ -1,61 +1,126 @@
 pipeline {
-    // Chạy trên bất kỳ agent nào có sẵn
     agent any
 
-    // Khai báo các công cụ đã cấu hình trong Jenkins (phải khớp tên chính xác)
     tools {
         maven 'Maven 3'
         snyk 'snyk'
     }
 
     stages {
-        // Giai đoạn 1: Quét lộ lọt thông tin nhạy cảm (Mật khẩu, Token, Key...)
+
+        // ================================================================
+        // STAGE 1: Quét lộ lọt thông tin nhạy cảm (Gitleaks)
+        // Luôn chạy trên toàn bộ repo, bất kể service nào thay đổi
+        // ================================================================
         stage('Gitleaks Scan') {
             steps {
                 echo 'Bắt đầu quét Gitleaks...'
-                // Chạy Gitleaks qua Docker (Thêm || true để pipeline không dừng ngay nếu phát hiện lỗi ở bài Lab này)
                 sh "docker run --rm -v ${WORKSPACE}:/path zricethezav/gitleaks:latest detect --source=/path --report-format=json --report-path=/path/gitleaks-report.json || true"
             }
         }
 
-        // Giai đoạn 2: Quét lỗ hổng bảo mật thư viện mã nguồn mở
+        // ================================================================
+        // STAGE 2: Quét lỗ hổng bảo mật thư viện (Snyk)
+        // Luôn chạy — quét toàn bộ monorepo một lần
+        // ================================================================
         stage('Snyk Scan') {
             steps {
                 echo 'Bắt đầu quét Snyk...'
-                // Lấy snyk-token từ Credentials của Jenkins
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                    // Xác thực Snyk
                     sh 'snyk auth ${SNYK_TOKEN}'
-                    // Quét toàn bộ dự án
                     sh 'snyk test --all-projects || true'
                 }
             }
         }
 
-        // Giai đoạn 3: Phân tích chất lượng code và Đợi kết quả Quality Gate
-        stage('SonarQube Analysis & Quality Gate') {
+        // ================================================================
+        // STAGE 3: Unit Test - Media Service          [Yêu cầu 5 + 6]
+        // - Tách riêng phase Test (mvn clean test), không gộp với Build
+        // - [Yêu cầu 6] when { changeset } = Logic Monorepo:
+        //   Stage này CHỈ chạy khi có file trong thư mục media/ thay đổi
+        // ================================================================
+        stage('Test - Media Service') {
+            when {
+                changeset "media/**"
+            }
             steps {
-                echo 'Bắt đầu quét SonarCloud và đợi kết quả...'
-                // Lấy sonar-token từ Credentials của Jenkins
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                    // Chạy lệnh Maven kèm tham số đợi kết quả (-Dsonar.qualitygate.wait=true)
-                    sh """
-                        mvn verify sonar:sonar \
-                        -Dsonar.projectKey=yas-ci-key \
-                        -Dsonar.organization=devops-yas-ci \
-                        -Dsonar.host.url=https://sonarcloud.io \
-                        -Dsonar.token=${SONAR_TOKEN} \
-                        -Dsonar.qualitygate.wait=true
-                    """
+                echo '[Yêu cầu 5] Chạy Unit Test riêng biệt cho Media Service...'
+                dir('media') {
+                    // Chỉ chạy test, chưa đóng gói — tách biệt với stage Build
+                    sh 'mvn clean test'
+                }
+            }
+            post {
+                always {
+                    // [Yêu cầu 5] Upload kết quả JUnit XML lên Jenkins UI
+                    // Hiển thị biểu đồ test trends trên trang build
+                    junit allowEmptyResults: true,
+                          testResults: 'media/target/surefire-reports/*.xml'
                 }
             }
         }
+
+        // ================================================================
+        // STAGE 4: Build Artifact - Media Service     [Yêu cầu 5 + 6]
+        // - Tách riêng phase Build (mvn package), chạy SAU khi Test pass
+        // - [Yêu cầu 6] Chỉ chạy khi media/ thay đổi (không build vô ích)
+        // ================================================================
+        stage('Build - Media Service') {
+            when {
+                changeset "media/**"
+            }
+            steps {
+                echo '[Yêu cầu 5] Build artifact cho Media Service (bỏ qua test vì đã chạy ở stage trước)...'
+                dir('media') {
+                    // -DskipTests vì test đã được chạy và xác nhận ở stage Test
+                    sh 'mvn package -DskipTests'
+                }
+            }
+            post {
+                success {
+                    // Lưu file JAR như artifact để có thể download từ Jenkins UI
+                    archiveArtifacts artifacts: 'media/target/*.jar',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
+        // ================================================================
+        // STAGE 5: SonarQube Analysis - Media Service  [Yêu cầu 6]
+        // - [Yêu cầu 6] Chỉ quét service bị thay đổi, không quét toàn bộ
+        // ================================================================
+        stage('SonarQube Analysis & Quality Gate') {
+            when {
+                changeset "media/**"
+            }
+            steps {
+                echo 'Phân tích SonarCloud cho Media Service...'
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    dir('media') {
+                        sh """
+                            mvn verify sonar:sonar \
+                            -Dsonar.projectKey=yas-ci-key \
+                            -Dsonar.organization=devops-yas-ci \
+                            -Dsonar.host.url=https://sonarcloud.io \
+                            -Dsonar.token=${SONAR_TOKEN} \
+                            -Dsonar.qualitygate.wait=true
+                        """
+                    }
+                }
+            }
+        }
+
     }
 
-    // Hành động sau khi Pipeline chạy xong
     post {
         always {
-            echo 'Quy trình DevSecOps Pipeline đã hoàn tất!'
+            echo 'DevSecOps Pipeline hoàn tất!'
+        }
+        success {
+            echo 'Tất cả stage PASSED.'
+        }
+        failure {
+            echo 'Pipeline FAILED — kiểm tra log ở stage bị đỏ.'
         }
     }
 }
