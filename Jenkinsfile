@@ -36,12 +36,19 @@ pipeline {
         // ================================================================
         // STAGE 3: Unit Test - Media Service          [Yêu cầu 5 + 6]
         // - Tách riêng phase Test (mvn clean test), không gộp với Build
-        // - [Yêu cầu 6] when { changeset } = Logic Monorepo:
-        //   Stage này CHỈ chạy khi có file trong thư mục media/ thay đổi
+        // - [Yêu cầu 6] Logic Monorepo: dùng git diff-tree thay changeset
+        //   vì changeset không hoạt động với PR build (empty changelog)
         // ================================================================
         stage('Test - Media Service') {
             when {
-                changeset "media/**"
+                expression {
+                    def changedFiles = sh(
+                        script: "git diff-tree --no-commit-id -r --name-only HEAD",
+                        returnStdout: true
+                    ).trim()
+                    echo "[Monorepo Check] Files changed: ${changedFiles}"
+                    return changedFiles.contains('media/')
+                }
             }
             steps {
                 echo '[Yêu cầu 5] Chạy Unit Test riêng biệt cho Media Service...'
@@ -67,7 +74,13 @@ pipeline {
         // ================================================================
         stage('Build - Media Service') {
             when {
-                changeset "media/**"
+                expression {
+                    def changedFiles = sh(
+                        script: "git diff-tree --no-commit-id -r --name-only HEAD",
+                        returnStdout: true
+                    ).trim()
+                    return changedFiles.contains('media/')
+                }
             }
             steps {
                 echo '[Yêu cầu 5] Build artifact cho Media Service (bỏ qua test vì đã chạy ở stage trước)...'
@@ -91,7 +104,13 @@ pipeline {
         // ================================================================
         stage('SonarQube Analysis & Quality Gate') {
             when {
-                changeset "media/**"
+                expression {
+                    def changedFiles = sh(
+                        script: "git diff-tree --no-commit-id -r --name-only HEAD",
+                        returnStdout: true
+                    ).trim()
+                    return changedFiles.contains('media/')
+                }
             }
             steps {
                 echo 'Phân tích SonarCloud cho Media Service...'
