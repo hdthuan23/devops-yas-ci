@@ -249,6 +249,41 @@ class MediaServiceUnitTest {
     }
 
     @Test
+    void getFile_whenMediaFoundAndNameMatches_thenReturnMediaDtoWithContent() {
+        media.setFileName("test.png");
+        media.setMediaType("image/png");
+        media.setFilePath("/uploads/test.png");
+
+        java.io.InputStream inputStream = new java.io.ByteArrayInputStream("image-data".getBytes());
+
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        when(fileSystemRepository.getFile("/uploads/test.png")).thenReturn(inputStream);
+
+        MediaDto mediaDto = mediaService.getFile(1L, "test.png");
+
+        assertNotNull(mediaDto);
+        assertNotNull(mediaDto.getContent());
+        assertEquals(org.springframework.http.MediaType.IMAGE_PNG, mediaDto.getMediaType());
+    }
+
+    @Test
+    void getFile_whenMediaFoundAndNameMatchesCaseInsensitive_thenReturnMediaDtoWithContent() {
+        media.setFileName("Test.PNG");
+        media.setMediaType("image/png");
+        media.setFilePath("/uploads/Test.PNG");
+
+        java.io.InputStream inputStream = new java.io.ByteArrayInputStream("image-data".getBytes());
+
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        when(fileSystemRepository.getFile("/uploads/Test.PNG")).thenReturn(inputStream);
+
+        MediaDto mediaDto = mediaService.getFile(1L, "test.png");
+
+        assertNotNull(mediaDto);
+        assertNotNull(mediaDto.getContent());
+    }
+
+    @Test
     void getFileByIds() {
         // Given
         var ip15 = getMedia(-1L, "Iphone 15");
