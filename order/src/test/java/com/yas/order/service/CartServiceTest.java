@@ -1,6 +1,5 @@
 package com.yas.order.service;
 
-import static com.yas.order.utils.SecurityContextUtils.setUpSecurityContext;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -46,7 +45,7 @@ class CartServiceTest {
         serviceUrlConfig = mock(ServiceUrlConfig.class);
         cartService = new CartService(restClient, serviceUrlConfig);
         responseSpec = Mockito.mock(RestClient.ResponseSpec.class);
-        setUpSecurityContext("test");
+        com.yas.order.utils.SecurityContextUtils.setUpSecurityContext("test");
         when(serviceUrlConfig.cart()).thenReturn(CART_URL);
     }
 
