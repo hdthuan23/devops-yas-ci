@@ -13,6 +13,10 @@
 	<name>webhook</name>
 	<description>YAS Webhook service</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_webhook</sonar.projectKey>
+    </properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

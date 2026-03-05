@@ -12,8 +12,9 @@
     <version>${revision}</version>
     <name>storefront-bff</name>
     <description>Back end for Storefront</description>
-
-    <dependencies>
+    <properties>
+        <sonar.projectKey>yas-ci-key_storefront-bff</sonar.projectKey>
+    </properties>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security-oauth2-client</artifactId>

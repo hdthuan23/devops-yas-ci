@@ -12,6 +12,9 @@
     <name>customer</name>
     <description>YAS Customer service</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_customer</sonar.projectKey>
+    </properties>
 
     <dependencies>
         <dependency>

@@ -14,7 +14,8 @@
     <version>${revision}</version>
     <name>delivery</name>
     <description>YAS Delivery service</description>
-
-
+    <properties>
+        <sonar.projectKey>yas-ci-key_delivery</sonar.projectKey>
+    </properties>
 
 </project>

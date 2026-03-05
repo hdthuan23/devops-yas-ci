@@ -16,6 +16,7 @@
     <description>YAS Recommendation service</description>
 
     <properties>
+        <sonar.projectKey>yas-ci-key_recommendation</sonar.projectKey>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <spring-ai.version>1.0.0-M2</spring-ai.version>

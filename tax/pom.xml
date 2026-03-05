@@ -12,8 +12,9 @@
     <version>${revision}</version>
     <name>tax</name>
     <description>YAS Tax Service</description>
-
-    <dependencies>
+    <properties>
+        <sonar.projectKey>yas-ci-key_tax</sonar.projectKey>
+    </properties>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>

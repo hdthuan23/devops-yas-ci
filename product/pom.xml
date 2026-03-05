@@ -13,6 +13,9 @@
     <name>product</name>
     <description>YAS Product service</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_product</sonar.projectKey>
+    </properties>
 
     <dependencies>
         <dependency>

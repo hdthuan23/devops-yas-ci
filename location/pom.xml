@@ -12,8 +12,9 @@
     <version>${revision}</version>
     <name>location</name>
     <description>YAS Location Service</description>
-
-    <dependencies>
+    <properties>
+        <sonar.projectKey>yas-ci-key_location</sonar.projectKey>
+    </properties>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>

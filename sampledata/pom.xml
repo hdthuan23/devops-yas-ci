@@ -13,6 +13,9 @@
     <name>sampledata</name>
     <description>YAS sampledata service</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_sampledata</sonar.projectKey>
+    </properties>
 
     <dependencies>
         <dependency>

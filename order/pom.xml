@@ -12,6 +12,10 @@
     <name>order</name>
     <description>Order Service for yas project</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_order</sonar.projectKey>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>

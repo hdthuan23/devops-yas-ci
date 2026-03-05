@@ -11,8 +11,9 @@
     <version>${revision}</version>
     <name>rating</name>
     <description>YAS Rating service</description>
-
-    <dependencies>
+    <properties>
+        <sonar.projectKey>yas-ci-key_rating</sonar.projectKey>
+    </properties>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>

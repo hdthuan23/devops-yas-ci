@@ -12,7 +12,9 @@
     <version>${revision}</version>
     <name>cart</name>
     <description>YAS Cart service</description>
-
+    <properties>
+        <sonar.projectKey>yas-ci-key_cart</sonar.projectKey>
+    </properties>
 
     <dependencies>
         <dependency>

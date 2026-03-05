@@ -12,6 +12,10 @@
     <name>payment</name>
     <description>Payment Service for Yas Project</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_payment</sonar.projectKey>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>

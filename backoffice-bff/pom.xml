@@ -12,8 +12,9 @@
     <version>1.0-SNAPSHOT</version>
     <name>backoffice-bff</name>
     <description>Backend for backoffice</description>
-
-    <dependencies>
+    <properties>
+        <sonar.projectKey>yas-ci-key_backoffice-bff</sonar.projectKey>
+    </properties>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>

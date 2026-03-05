@@ -15,6 +15,9 @@
     <name>Common Library</name>
     <description>YAS Common Library service</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_common-library</sonar.projectKey>
+    </properties>
 
     <dependencies>
         <dependency>

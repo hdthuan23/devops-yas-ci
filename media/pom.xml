@@ -13,6 +13,10 @@
     <name>media</name>
     <description>Yas Media service</description>
 
+    <properties>
+        <sonar.projectKey>yas-ci-key_media</sonar.projectKey>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
