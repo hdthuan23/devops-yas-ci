@@ -61,12 +61,12 @@ class ControllerAdvisorTest {
 
     @Test
     void handleMethodArgumentNotValid_thenReturnBadRequest() {
+        MethodArgumentNotValidException ex = Mockito.mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         FieldError fieldError = new FieldError("media", "caption", "must not be null");
 
+        Mockito.when(ex.getBindingResult()).thenReturn(bindingResult);
         Mockito.when(bindingResult.getFieldErrors()).thenReturn(java.util.List.of(fieldError));
-
-        MethodArgumentNotValidException ex = new MethodArgumentNotValidException(bindingResult);
 
         ResponseEntity<ErrorVm> response = controllerAdvisor.handleMethodArgumentNotValid(ex);
 
@@ -135,8 +135,10 @@ class ControllerAdvisorTest {
     }
 
     private MethodArgumentNotValidException createMethodArgumentNotValidException() {
+        MethodArgumentNotValidException ex = Mockito.mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        Mockito.when(ex.getBindingResult()).thenReturn(bindingResult);
         Mockito.when(bindingResult.getFieldErrors()).thenReturn(java.util.List.of());
-        return new MethodArgumentNotValidException(bindingResult);
+        return ex;
     }
 }
