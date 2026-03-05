@@ -12,9 +12,7 @@
     <version>1.0-SNAPSHOT</version>
     <name>backoffice-bff</name>
     <description>Backend for backoffice</description>
-    <properties>
-        <sonar.projectKey>nashtech-garage_yas-backoffice-bff</sonar.projectKey>
-    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
