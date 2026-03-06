@@ -104,6 +104,24 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>com/yas/**/*Application.class</exclude>
+                        <exclude>com/yas/**/config/**</exclude>
+                        <exclude>com/yas/**/configuration/**</exclude>
+                        <exclude>com/yas/**/exception/**</exclude>
+                        <exclude>com/yas/**/constants/**</exclude>
+                        <exclude>com/yas/**/controller/**</exclude>
+                        <exclude>com/yas/**/viewmodel/**</exclude>
+                        <exclude>com/yas/**/store/**</exclude>
+                        <exclude>com/yas/**/query/**</exclude>
+                        <exclude>com/yas/**/document/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <repositories>
