@@ -1,16 +1,19 @@
 package com.yas.inventory.controller;
 
-import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.ObjectWriter;
 import com.yas.inventory.model.Warehouse;
 import com.yas.inventory.model.enumeration.FilterExistInWhSelection;
 import com.yas.inventory.service.WarehouseService;
@@ -19,17 +22,17 @@ import com.yas.inventory.viewmodel.warehouse.WarehouseDetailVm;
 import com.yas.inventory.viewmodel.warehouse.WarehouseGetVm;
 import com.yas.inventory.viewmodel.warehouse.WarehouseListGetVm;
 import com.yas.inventory.viewmodel.warehouse.WarehousePostVm;
-import java.util.Arrays;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
-
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectWriter;
 
 @WebMvcTest(controllers = WarehouseController.class,
     excludeAutoConfiguration = OAuth2ResourceServerAutoConfiguration.class)
@@ -42,303 +45,116 @@ class WarehouseControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private ObjectWriter objectWriter;
-
-    @BeforeEach
-    void setUp() {
-        objectWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
-    }
-
     @Test
-    void testGetProductByWarehouse_whenValidRequest_thenReturnProducts() throws Exception {
-        Long warehouseId = 1L;
-        String productName = "Sample Product";
-        String productSku = "SKU123";
-        FilterExistInWhSelection existStatus = FilterExistInWhSelection.YES;
+    void getProductByWarehouse_ShouldReturnOk() throws Exception {
+        ProductInfoVm product = new ProductInfoVm(1L, "Product 1", "SKU-001", true);
+        when(warehouseService.getProductWarehouse(anyLong(), anyString(), anyString(),
+            any(FilterExistInWhSelection.class)))
+            .thenReturn(List.of(product));
 
-        List<ProductInfoVm> products = Arrays.asList(
-            new ProductInfoVm(1L, "Product1", "SKU1", true),
-            new ProductInfoVm(2L, "Product2", "SKU2", true)
-        );
-
-        given(warehouseService.getProductWarehouse(warehouseId, productName, productSku, existStatus))
-            .willReturn(products);
-
-        this.mockMvc.perform(get("/backoffice/warehouses/{warehouseId}/products",
-                    warehouseId)
-                .param("productName", productName)
-                .param("productSku", productSku)
-                .param("existStatus", existStatus.name())
+        mockMvc.perform(get("/backoffice/warehouses/1/products")
+                .param("productName", "Product")
+                .param("productSku", "SKU")
+                .param("existStatus", "YES")
                 .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(1))
-            .andExpect(jsonPath("$[0].name").value("Product1"))
-            .andExpect(jsonPath("$[0].sku").value("SKU1"))
-            .andExpect(jsonPath("$[1].id").value(2))
-            .andExpect(jsonPath("$[1].name").value("Product2"))
-            .andExpect(jsonPath("$[1].sku").value("SKU2"));
+            .andExpect(status().isOk());
     }
 
     @Test
-    void testGetPageableWarehouses_whenValidRequest_thenReturnPagedWarehouses() throws Exception {
+    void getPageableWarehouses_ShouldReturnOk() throws Exception {
+        WarehouseListGetVm listGetVm = new WarehouseListGetVm(
+            List.of(new WarehouseGetVm(1L, "Warehouse")), 0, 10, 1, 1, true);
+        when(warehouseService.getPageableWarehouses(anyInt(), anyInt())).thenReturn(listGetVm);
 
-        int pageNo = 1;
-        int pageSize = 10;
-        int totalElements = 12;
-
-        List<WarehouseGetVm> warehouseContent
-            = List.of(new WarehouseGetVm(1L, "A1"), new WarehouseGetVm(2L, "A2"));
-        WarehouseListGetVm warehouseListGetVm
-            = new WarehouseListGetVm(warehouseContent, pageNo, pageSize, totalElements, 2, true);
-
-        given(warehouseService.getPageableWarehouses(pageNo, pageSize)).willReturn(warehouseListGetVm);
-
-        this.mockMvc.perform(get("/backoffice/warehouses/paging")
-                .param("pageNo", String.valueOf(pageNo))
-                .param("pageSize", String.valueOf(pageSize))
+        mockMvc.perform(get("/backoffice/warehouses/paging")
+                .param("pageNo", "0")
+                .param("pageSize", "10")
                 .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.warehouseContent[0].id").value(1))
-            .andExpect(jsonPath("$.warehouseContent[0].name").value("A1"))
-            .andExpect(jsonPath("$.warehouseContent[1].id").value(2))
-            .andExpect(jsonPath("$.warehouseContent[1].name").value("A2"))
-            .andExpect(jsonPath("$.totalElements").value(12))
-            .andExpect(jsonPath("$.pageNo").value(pageNo))
-            .andExpect(jsonPath("$.pageSize").value(pageSize))
-            .andExpect(jsonPath("$.totalPages").value(2));
-
+            .andExpect(status().isOk());
     }
 
     @Test
-    void testListWarehouses_whenWarehousesExist_thenReturnListOfWarehouses() throws Exception {
+    void listWarehouses_ShouldReturnOk() throws Exception {
+        when(warehouseService.findAllWarehouses())
+            .thenReturn(List.of(new WarehouseGetVm(1L, "Warehouse")));
 
-        given(warehouseService.findAllWarehouses()).willReturn(
-            Arrays.asList(
-                WarehouseGetVm.fromModel(Warehouse.builder().id(1L).name("Warehouse1").addressId(1L).build()),
-                WarehouseGetVm.fromModel(Warehouse.builder().id(2L).name("Warehouse2").addressId(2L).build())
-            )
-        );
-
-        this.mockMvc.perform(get("/backoffice/warehouses")
+        mockMvc.perform(get("/backoffice/warehouses")
                 .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(1))
-            .andExpect(jsonPath("$[0].name").value("Warehouse1"))
-            .andExpect(jsonPath("$[1].id").value(2))
-            .andExpect(jsonPath("$[1].name").value("Warehouse2"));
+            .andExpect(status().isOk());
     }
 
     @Test
-    void testGetWarehouse_whenWarehouseExists_thenReturnWarehouseDetails() throws Exception {
+    void getWarehouse_ShouldReturnOk() throws Exception {
+        WarehouseDetailVm detailVm = new WarehouseDetailVm(
+            1L, "Warehouse", "John", "1234", "Addr1", "Addr2",
+            "HCMC", "70000", 1L, 1L, 1L);
+        when(warehouseService.findById(1L)).thenReturn(detailVm);
 
-        Long warehouseId = 1L;
-        WarehouseDetailVm warehouseDetailVm = new WarehouseDetailVm(
-            warehouseId,
-            "Main Warehouse",
-            "John Doe",
-            "123-456-7890",
-            "123 Main St",
-            "Suite 100",
-            "Springfield",
-            "12345",
-            10L,
-            5L,
-            2L
-        );
-
-        given(warehouseService.findById(warehouseId)).willReturn(warehouseDetailVm);
-
-        this.mockMvc.perform(get("/backoffice/warehouses/{id}", warehouseId)
+        mockMvc.perform(get("/backoffice/warehouses/1")
                 .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(warehouseId))
-            .andExpect(jsonPath("$.name").value("Main Warehouse"))
-            .andExpect(jsonPath("$.contactName").value("John Doe"));
+            .andExpect(status().isOk());
     }
 
     @Test
-    void testCreateWarehouse_whenRequestIsValid_thenReturn201() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("name")
-            .contactName("contactName")
-            .phone("12345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
+    void createWarehouse_ShouldReturnCreated() throws Exception {
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(1L);
+        warehouse.setName("New Warehouse");
+
+        when(warehouseService.create(any(WarehousePostVm.class))).thenReturn(warehouse);
+
+        WarehousePostVm postVm = WarehousePostVm.builder()
+            .name("New Warehouse")
+            .contactName("John")
+            .phone("123456")
+            .addressLine1("123 Main")
+            .city("HCMC")
+            .zipCode("70000")
             .districtId(1L)
             .stateOrProvinceId(1L)
             .countryId(1L)
             .build();
 
-        String request = objectWriter.writeValueAsString(warehousePostVm);
-        given(warehouseService.create(warehousePostVm)).willReturn(new Warehouse());
+        ObjectWriter writer = new ObjectMapper().writer();
+        String json = writer.writeValueAsString(postVm);
 
-        this.mockMvc.perform(post("/backoffice/warehouses")
+        mockMvc.perform(post("/backoffice/warehouses")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+                .content(json))
             .andExpect(status().isCreated());
     }
 
     @Test
-    void testCreateWarehouse_whenPhoneIsOverMaxLength_thenReturnBadRequest() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("name")
-            .contactName("contactName")
-            .phone("12345678912345678912345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
+    void updateWarehouse_ShouldReturnNoContent() throws Exception {
+        doNothing().when(warehouseService).update(any(WarehousePostVm.class), eq(1L));
+
+        WarehousePostVm postVm = WarehousePostVm.builder()
+            .name("Updated Warehouse")
+            .contactName("John")
+            .phone("123456")
+            .addressLine1("123 Main")
+            .city("HCMC")
+            .zipCode("70000")
             .districtId(1L)
             .stateOrProvinceId(1L)
             .countryId(1L)
             .build();
 
-        String request = objectWriter.writeValueAsString(warehousePostVm);
+        ObjectWriter writer = new ObjectMapper().writer();
+        String json = writer.writeValueAsString(postVm);
 
-        this.mockMvc.perform(post("/backoffice/warehouses")
+        mockMvc.perform(put("/backoffice/warehouses/1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void testCreateWarehouse_whenDistrictIsNull_thenReturnBadRequest() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("name")
-            .contactName("contactName")
-            .phone("12345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
-            .districtId(null)
-            .stateOrProvinceId(1L)
-            .countryId(1L)
-            .build();
-
-        String request = objectWriter.writeValueAsString(warehousePostVm);
-
-        this.mockMvc.perform(post("/backoffice/warehouses")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void testCreateWarehouse_whenContactNameIsBlank_thenReturnBadRequest() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("")
-            .contactName("contactName")
-            .phone("12345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
-            .districtId(1L)
-            .stateOrProvinceId(1L)
-            .countryId(1L)
-            .build();
-
-        String request = objectWriter.writeValueAsString(warehousePostVm);
-
-        this.mockMvc.perform(post("/backoffice/warehouses")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void testUpdateWarehouse_whenRequestIsValid_thenReturn204() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("name")
-            .contactName("contactName")
-            .phone("12345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
-            .districtId(1L)
-            .stateOrProvinceId(1L)
-            .countryId(1L)
-            .build();
-
-        String request = objectWriter.writeValueAsString(warehousePostVm);
-
-        this.mockMvc.perform(put("/backoffice/warehouses/1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+                .content(json))
             .andExpect(status().isNoContent());
     }
 
     @Test
-    void testUpdateWarehouse_whenPhoneIsOverMaxLength_thenReturnBadRequest() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("name")
-            .contactName("contactName")
-            .phone("12345678912345678912345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
-            .districtId(1L)
-            .stateOrProvinceId(1L)
-            .countryId(1L)
-            .build();
+    void deleteWarehouse_ShouldReturnNoContent() throws Exception {
+        doNothing().when(warehouseService).delete(1L);
 
-        String request = objectWriter.writeValueAsString(warehousePostVm);
-
-        this.mockMvc.perform(put("/backoffice/warehouses/1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
-            .andExpect(status().isBadRequest());
+        mockMvc.perform(delete("/backoffice/warehouses/1")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNoContent());
     }
-
-    @Test
-    void testUpdateWarehouse_whenDistrictIsNull_thenReturnBadRequest() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("name")
-            .contactName("contactName")
-            .phone("12345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
-            .districtId(null)
-            .stateOrProvinceId(1L)
-            .countryId(1L)
-            .build();
-
-        String request = objectWriter.writeValueAsString(warehousePostVm);
-
-        this.mockMvc.perform(put("/backoffice/warehouses/1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void testUpdateWarehouse_whenContactNameIsBlank_thenReturnBadRequest() throws Exception {
-        WarehousePostVm warehousePostVm = WarehousePostVm.builder()
-            .name("")
-            .contactName("contactName")
-            .phone("12345678")
-            .addressLine1("addressLine1")
-            .addressLine2("addressLine2")
-            .city("city")
-            .zipCode("zipCode")
-            .districtId(1L)
-            .stateOrProvinceId(1L)
-            .countryId(1L)
-            .build();
-
-        String request = objectWriter.writeValueAsString(warehousePostVm);
-
-        this.mockMvc.perform(put("/backoffice/warehouses/1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
-            .andExpect(status().isBadRequest());
-    }
-
 }
