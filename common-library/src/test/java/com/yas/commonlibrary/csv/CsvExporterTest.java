@@ -29,6 +29,15 @@ class CsvExporterTest {
         private List<String> tags;
     }
 
+    // Class with a @CsvColumn field but NO getter - to trigger NoSuchMethodException path
+    @SuperBuilder
+    @CsvName(fileName = "NoGetterFile")
+    static class NoGetterData extends BaseCsv {
+
+        @CsvColumn(columnName = "SecretField")
+        private String secretField;
+    }
+
     @Test
     void testExportToCsv_withValidData_shouldReturnCorrectCsvContent() throws IOException {
         // Given
@@ -84,5 +93,40 @@ class CsvExporterTest {
         String expectedPrefix = "TestFile_";
         assertTrue(fileName.startsWith(expectedPrefix));
         assertTrue(fileName.endsWith(".csv"));
+    }
+
+    @Test
+    void testExportToCsv_withNullFieldValues_shouldReturnEmptyStringsForNullFields() throws IOException {
+        // Given: name and tags are null
+        List<BaseCsv> dataList = List.of(
+            TestData.builder().id(1L).name(null).tags(null).build()
+        );
+
+        // When
+        byte[] csvBytes = CsvExporter.exportToCsv(dataList, TestData.class);
+        String csvContent = new String(csvBytes);
+
+        // Then: null fields should produce empty strings in CSV
+        String[] lines = csvContent.split("\n");
+        assertEquals("Id,Name,Tags", lines[0]);
+        assertEquals("1,,", lines[1]);
+    }
+
+    @Test
+    void testExportToCsv_withNoGetterField_shouldReturnEmptyForMissingGetter() throws IOException {
+        // Given: NoGetterData has a @CsvColumn field but no getter (triggers NoSuchMethodException path)
+        List<BaseCsv> dataList = List.of(
+            NoGetterData.builder().id(2L).build()
+        );
+
+        // When
+        byte[] csvBytes = CsvExporter.exportToCsv(dataList, NoGetterData.class);
+        String csvContent = new String(csvBytes);
+
+        // Then: header should include the column, value should be empty due to caught exception
+        assertTrue(csvContent.contains("Id,SecretField"));
+        String[] lines = csvContent.split("\n");
+        // id=2, secretField=empty (NoSuchMethodException caught)
+        assertEquals("2,", lines[1]);
     }
 }
