@@ -282,6 +282,29 @@ class OrderServiceTest {
     }
 
     @Test
+    void testUpdateOrderPaymentStatus_whenPaymentStatusCompleted_shouldSetOrderStatusToPaid() {
+        // Arrange
+        PaymentOrderStatusVm inputVm = PaymentOrderStatusVm.builder()
+            .orderId(1L)
+            .paymentId(456L)
+            .paymentStatus("COMPLETED")
+            .build();
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(mockOrder));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        PaymentOrderStatusVm result = orderService.updateOrderPaymentStatus(inputVm);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1L, result.orderId());
+        assertEquals(PaymentStatus.COMPLETED, mockOrder.getPaymentStatus());
+        assertEquals(OrderStatus.PAID, mockOrder.getOrderStatus());
+        assertEquals("PAID", result.orderStatus());
+    }
+
+    @Test
     void testRejectOrder_whenOrderExists_shouldUpdateOrderStatus() {
         // Arrange
         when(orderRepository.findById(1L)).thenReturn(Optional.of(mockOrder));
