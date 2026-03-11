@@ -40,4 +40,10 @@ class MessagesUtilsTest {
         String message = MessagesUtils.getMessage("ORDER_NOT_FOUND", "ORD-001");
         assertEquals("Order ORD-001 is not found", message);
     }
+
+    @Test
+    void testGetMessage_withUnknownKeyAndArguments_returnsKeyWithArgumentsUnchanged() {
+        String message = MessagesUtils.getMessage("UNKNOWN_KEY_WITH_ARG", "arg1");
+        assertEquals("UNKNOWN_KEY_WITH_ARG", message);
+    }
 }
