@@ -77,6 +77,11 @@ class UserServiceTest {
     }
 
     @Test
+    void testFormatUsernameForDisplay_WithTrailingDot_ShouldCapitalizeFirstName() {
+        assertEquals("John", userService.formatUsernameForDisplay("john."));
+    }
+
+    @Test
     void testFormatUsernameForDisplay_WithSingleCharacter_ShouldCapitalize() {
         assertEquals("A", userService.formatUsernameForDisplay("a.bc"));
     }
