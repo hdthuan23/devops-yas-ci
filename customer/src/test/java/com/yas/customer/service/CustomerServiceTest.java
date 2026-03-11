@@ -372,4 +372,15 @@ class CustomerServiceTest {
         assertThat(credentials.getType()).isEqualTo("password");
         assertThat(credentials.isTemporary()).isFalse();
     }
+
+    @Test
+    void testGetCustomers_withLargePageNumber_returnEmptyList() {
+        when(usersResource.search(any(), anyInt(), anyInt())).thenReturn(List.of());
+        when(usersResource.count()).thenReturn(5);
+
+        CustomerListVm customerListVm = customerService.getCustomers(10);
+
+        assertThat(customerListVm.totalUser()).isEqualTo(5);
+        assertThat(customerListVm.customers()).isEmpty();
+    }
 }
