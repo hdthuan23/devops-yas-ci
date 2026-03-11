@@ -120,4 +120,22 @@ class ProductServiceTest {
         assertEquals(42L, result.id());
         assertEquals("Product 42", result.name());
     }
+
+    @Test
+    void testGetProductDetail_whenRestClientThrowsException_shouldPropagateException() {
+        // Given
+        Long productId = 99L;
+        String apiUrl = "http://api.example.com";
+
+        when(config.getApiUrl()).thenReturn(apiUrl);
+        when(restClient.get()).thenThrow(new RuntimeException("External API unavailable"));
+
+        // When/Then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+            () -> productService.getProductDetail(productId));
+
+        assertEquals("External API unavailable", exception.getMessage());
+        verify(config).getApiUrl();
+        verify(restClient).get();
+    }
 }
