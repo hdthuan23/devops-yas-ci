@@ -2,6 +2,10 @@ package com.yas.cart.service;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import com.yas.commonlibrary.config.ServiceUrlConfig;
@@ -9,6 +13,7 @@ import com.yas.cart.viewmodel.ProductThumbnailVm;
 import java.net.URI;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.core.ParameterizedTypeReference;
@@ -37,31 +42,181 @@ class ProductServiceTest {
         responseSpec = Mockito.mock(RestClient.ResponseSpec.class);
     }
 
-    @Test
-    void getProducts_NormalCase_ReturnProductThumbnailVms() {
+    @Nested
+    class GetProductsTest {
+        @Test
+        void getProducts_NormalCase_ReturnProductThumbnailVms() {
 
-        List<Long> ids = List.of(1L, 2L, 3L);
-        URI url = UriComponentsBuilder
-            .fromUriString("http://api.yas.local/media")
-            .path("/storefront/products/list-featured")
-            .queryParam("productId", ids)
-            .build()
-            .toUri();
+            List<Long> ids = List.of(1L, 2L, 3L);
+            URI url = UriComponentsBuilder
+                .fromUriString("http://api.yas.local/media")
+                .path("/storefront/products/list-featured")
+                .queryParam("productId", ids)
+                .build()
+                .toUri();
 
-        when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/media");
-        when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
-        }))
-            .thenReturn(ResponseEntity.ok(getProductThumbnailVms()));
+            when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/media");
+            when(restClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
+            }))
+                .thenReturn(ResponseEntity.ok(getProductThumbnailVms()));
 
-        List<ProductThumbnailVm> result = productService.getProducts(ids);
+            List<ProductThumbnailVm> result = productService.getProducts(ids);
 
-        assertThat(result).hasSize(3);
-        assertThat(result.get(0).id()).isEqualTo(1);
-        assertThat(result.get(1).id()).isEqualTo(2);
-        assertThat(result.get(2).id()).isEqualTo(3);
+            assertThat(result).hasSize(3);
+            assertThat(result.get(0).id()).isEqualTo(1);
+            assertThat(result.get(1).id()).isEqualTo(2);
+            assertThat(result.get(2).id()).isEqualTo(3);
+        }
+
+        @Test
+        void getProducts_withEmptyList_ReturnEmptyList() {
+            List<Long> ids = List.of();
+            URI url = UriComponentsBuilder
+                .fromUriString("http://api.yas.local/product")
+                .path("/storefront/products/list-featured")
+                .queryParam("productId", ids)
+                .build()
+                .toUri();
+
+            when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/product");
+            when(restClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
+            }))
+                .thenReturn(ResponseEntity.ok(List.of()));
+
+            List<ProductThumbnailVm> result = productService.getProducts(ids);
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void getProducts_withSingleId_ReturnSingleProduct() {
+            List<Long> ids = List.of(1L);
+            URI url = UriComponentsBuilder
+                .fromUriString("http://api.yas.local/product")
+                .path("/storefront/products/list-featured")
+                .queryParam("productId", ids)
+                .build()
+                .toUri();
+
+            when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/product");
+            when(restClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
+            }))
+                .thenReturn(ResponseEntity.ok(List.of(getProductThumbnailVms().get(0))));
+
+            List<ProductThumbnailVm> result = productService.getProducts(ids);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).id()).isEqualTo(1);
+        }
+    }
+
+    @Nested
+    class GetProductByIdTest {
+        @Test
+        void getProductById_whenProductExists_returnProductThumbnailVm() {
+            Long id = 1L;
+            URI url = UriComponentsBuilder
+                .fromUriString("http://api.yas.local/product")
+                .path("/storefront/products/list-featured")
+                .queryParam("productId", List.of(id))
+                .build()
+                .toUri();
+
+            when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/product");
+            when(restClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
+            }))
+                .thenReturn(ResponseEntity.ok(List.of(getProductThumbnailVms().get(0))));
+
+            ProductThumbnailVm result = productService.getProductById(id);
+
+            assertNotNull(result);
+            assertThat(result.id()).isEqualTo(1);
+            assertThat(result.name()).isEqualTo("Product 1");
+        }
+
+        @Test
+        void getProductById_whenProductNotFound_returnNull() {
+            Long id = 99L;
+            URI url = UriComponentsBuilder
+                .fromUriString("http://api.yas.local/product")
+                .path("/storefront/products/list-featured")
+                .queryParam("productId", List.of(id))
+                .build()
+                .toUri();
+
+            when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/product");
+            when(restClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
+            }))
+                .thenReturn(ResponseEntity.ok(List.of()));
+
+            ProductThumbnailVm result = productService.getProductById(id);
+
+            assertNull(result);
+        }
+    }
+
+    @Nested
+    class ExistsByIdTest {
+        @Test
+        void existsById_whenProductExists_returnTrue() {
+            Long id = 1L;
+            URI url = UriComponentsBuilder
+                .fromUriString("http://api.yas.local/product")
+                .path("/storefront/products/list-featured")
+                .queryParam("productId", List.of(id))
+                .build()
+                .toUri();
+
+            when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/product");
+            when(restClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
+            }))
+                .thenReturn(ResponseEntity.ok(List.of(getProductThumbnailVms().get(0))));
+
+            boolean result = productService.existsById(id);
+
+            assertTrue(result);
+        }
+
+        @Test
+        void existsById_whenProductNotFound_returnFalse() {
+            Long id = 99L;
+            URI url = UriComponentsBuilder
+                .fromUriString("http://api.yas.local/product")
+                .path("/storefront/products/list-featured")
+                .queryParam("productId", List.of(id))
+                .build()
+                .toUri();
+
+            when(serviceUrlConfig.product()).thenReturn("http://api.yas.local/product");
+            when(restClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+            when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductThumbnailVm>>() {
+            }))
+                .thenReturn(ResponseEntity.ok(List.of()));
+
+            boolean result = productService.existsById(id);
+
+            assertFalse(result);
+        }
     }
 
     private List<ProductThumbnailVm> getProductThumbnailVms() {
