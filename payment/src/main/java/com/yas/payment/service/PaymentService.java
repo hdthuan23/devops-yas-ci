@@ -61,13 +61,15 @@ public class PaymentService {
         Long orderId = orderService.updateCheckoutStatus(capturedPayment);
         capturedPayment.setOrderId(orderId);
         Payment payment = createPayment(capturedPayment);
-        PaymentOrderStatusVm orderPaymentStatusVm =
-                PaymentOrderStatusVm.builder()
-                        .paymentId(payment.getId())
-                        .orderId(payment.getOrderId())
-                        .paymentStatus(payment.getPaymentStatus().name())
-                        .build();
-        orderService.updateOrderStatus(orderPaymentStatusVm);
+        if (payment.getPaymentStatus() != com.yas.payment.model.enumeration.PaymentStatus.PENDING) {
+            PaymentOrderStatusVm orderPaymentStatusVm =
+                    PaymentOrderStatusVm.builder()
+                            .paymentId(payment.getId())
+                            .orderId(payment.getOrderId())
+                            .paymentStatus(payment.getPaymentStatus().name())
+                            .build();
+            orderService.updateOrderStatus(orderPaymentStatusVm);
+        }
         return CapturePaymentResponseVm.builder()
                 .orderId(capturedPayment.getOrderId())
                 .checkoutId(capturedPayment.getCheckoutId())
