@@ -349,7 +349,112 @@ pipeline {
                 }
             }
         }
+
+        // ====================================================================
+        // STAGE 7: DOCKER — Build image & Push lên Docker Hub
+        // Tag = commit SHA (đáp ứng yêu cầu CI: tag bằng commit ID)
+        // ====================================================================
+        stage('Docker Build & Push') {
+            when {
+                expression { return !changedServices.isEmpty() }
+            }
+            steps {
+                script {
+                    def shortSha = env.GIT_COMMIT.take(7)
+
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-credentials',   // Tên credential trong Jenkins
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+                        changedServices.each { svc ->
+                            if (!fileExists("${svc}/Dockerfile")) {
+                                echo "⚠️ ${svc}: không có Dockerfile — bỏ qua Docker build"
+                                return
+                            }
+
+                            stage("Docker ${svc}") {
+                                def imageFullSha = "${DOCKER_USER}/yas-${svc}:${env.GIT_COMMIT}"
+                                def imageShortSha = "${DOCKER_USER}/yas-${svc}:${shortSha}"
+
+                                echo "🐳 Build & Push: ${svc}"
+                                sh """
+                                    docker build --platform linux/amd64 \
+                                        -t ${imageFullSha} \
+                                        -t ${imageShortSha} \
+                                        ./${svc}
+                                    docker push ${imageFullSha}
+                                    docker push ${imageShortSha}
+                                    docker rmi ${imageFullSha} ${imageShortSha} || true
+                                """
+                            }
+                        }
+
+                        sh 'docker logout'
+                    }
+                }
+            }
+        }
+
+
+        // ====================================================================
+        // STAGE 8: CD — Update yas-gitops repo để ArgoCD tự sync
+        // ====================================================================
+        stage('Update GitOps') {
+            when {
+                expression { return !changedServices.isEmpty() }
+            }
+            steps {
+                script {
+                    def shortSha = env.GIT_COMMIT.take(7)
+
+                    withCredentials([string(
+                        credentialsId: 'github-token',
+                        variable: 'GH_TOKEN'
+                    )]) {
+                        sh """
+                            git clone https://${GH_TOKEN}@github.com/thannthai/yas-gitops.git
+                            cd yas-gitops
+                            git config user.email "jenkins@ci.com"
+                            git config user.name "Jenkins"
+                        """
+
+                        changedServices.each { svc ->
+                            // Chỉ update service nào có Dockerfile (tức là có image)
+                            if (!fileExists("${svc}/Dockerfile")) return
+
+                            sh """
+                                cd yas-gitops
+
+                                # Update tag trong values.yaml của service
+                                # Dev: dùng branch name để phân biệt môi trường
+                                if [ "${env.BRANCH_NAME}" = "main" ]; then
+                                    sed -i 's|tag:.*|tag: ${shortSha}|' charts/${svc}/values.yaml
+                                    git add charts/${svc}/values.yaml
+                                fi
+                            """
+                        }
+
+                        sh """
+                            cd yas-gitops
+                            # Chỉ commit nếu có thay đổi thật sự
+                            if ! git diff --cached --quiet; then
+                                git commit -m "ci: update images to ${shortSha} [${env.BRANCH_NAME}]"
+                                git push
+                            else
+                                echo "✅ Không có values.yaml nào thay đổi — bỏ qua push"
+                            fi
+                            cd ..
+                            rm -rf yas-gitops
+                        """
+                    }
+                }
+            }
+        }
     }
+
 
     // ========================================================================
     // POST — Hành động sau khi pipeline kết thúc
