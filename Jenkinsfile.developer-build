@@ -178,7 +178,7 @@ pipeline {
                         variable: 'GH_TOKEN'
                     )]) {
                         sh """
-                            git clone https://${GH_TOKEN}@github.com/thannthai/yas-gitops.git
+                            git clone https://\${GH_TOKEN}@github.com/thannthai/yas-gitops.git
                             cd yas-gitops
                             git config user.email "jenkins@ci.com"
                             git config user.name "Jenkins"
