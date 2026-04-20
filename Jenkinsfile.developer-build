@@ -9,6 +9,10 @@
 //   - Job sẽ build image → push Docker Hub → update GitOps → ArgoCD tự deploy
 // ============================================================================
 
+// Map dùng để truyền shortSha giữa Build stage và Deploy stage
+// (không dùng env["key"] = value vì Jenkins sandbox chặn putAt trên EnvActionImpl)
+def serviceTags = [:]
+
 def SERVICES = [
     'backoffice-bff', 'cart', 'customer', 'inventory', 'location',
     'media', 'order', 'payment', 'payment-paypal', 'product',
@@ -150,8 +154,8 @@ pipeline {
                                     """
                                 }
 
-                                // Lưu shortSha để dùng ở stage Deploy
-                                env["TAG_${svc.toUpperCase().replace('-', '_')}"] = shortSha
+                                // Lưu shortSha vào Groovy Map để dùng ở stage Deploy
+                                serviceTags[svc] = shortSha
                             }
                         }
 
@@ -185,8 +189,7 @@ pipeline {
                             // split(':', 2) nhất quán với Build stage
                             def parts    = entry.split(':', 2)
                             def svc      = parts[0]
-                            def envKey   = "TAG_${svc.toUpperCase().replace('-', '_')}"
-                            def shortSha = env[envKey]
+                            def shortSha = serviceTags[svc]
 
                             sh """
                                 cd yas-gitops
