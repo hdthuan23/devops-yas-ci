@@ -376,8 +376,11 @@ pipeline {
                             }
 
                             stage("Docker ${svc}") {
-                                def imageFullSha = "${DOCKER_USER}/yas-${svc}:${env.GIT_COMMIT}"
-                                def imageShortSha = "${DOCKER_USER}/yas-${svc}:${shortSha}"
+                                // Lấy DOCKER_USER vào Groovy variable để dùng trong string interpolation
+                                // (withCredentials chỉ bind shell env var, không tự thành Groovy var)
+                                def dockerUser    = env.DOCKER_USER
+                                def imageFullSha  = "${dockerUser}/yas-${svc}:${env.GIT_COMMIT}"
+                                def imageShortSha = "${dockerUser}/yas-${svc}:${shortSha}"
 
                                 echo "🐳 Build & Push: ${svc}"
                                 sh """

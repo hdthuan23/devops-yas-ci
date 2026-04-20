@@ -36,6 +36,8 @@ pipeline {
                                 git commit -m "cleanup: reset ${params.SERVICE} to main"
                                 git push
                                 echo "✅ Reset ${params.SERVICE} về tag main"
+                            else
+                                echo "⚠️ ${params.SERVICE} đã ở tag main rồi — không cần reset"
                             fi
 
                             cd ..

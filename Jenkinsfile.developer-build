@@ -108,7 +108,8 @@ pipeline {
 
                         def entries = env.SERVICES_TO_BUILD.split(',').findAll { it }
                         entries.each { entry ->
-                            def parts  = entry.split(':')
+                            // split(':', 2) để tránh lỗi nếu tên branch chứa dấu ':'
+                            def parts  = entry.split(':', 2)
                             def svc    = parts[0]
                             def branch = parts[1]
 
@@ -133,16 +134,21 @@ pipeline {
                                 // Build JAR
                                 sh "mvn clean package -pl ${svc} -am -DskipTests -q"
 
-                                // Build & push Docker image
-                                def imageTag = "${DOCKER_USER}/yas-${svc}:${shortSha}"
-                                sh """
-                                    docker build --platform linux/amd64 \
-                                        -t ${imageTag} \
-                                        ./${svc}
-                                    docker push ${imageTag}
-                                    docker rmi ${imageTag} || true
-                                    echo "✅ Pushed: ${imageTag}"
-                                """
+                                // Build & push Docker image (chỉ khi có Dockerfile)
+                                if (!fileExists("${svc}/Dockerfile")) {
+                                    echo "⚠️ ${svc}: không có Dockerfile — bỏ qua Docker build"
+                                } else {
+                                    // Lấy DOCKER_USER vào Groovy variable (withCredentials chỉ bind shell env)
+                                    def imageTag = "${env.DOCKER_USER}/yas-${svc}:${shortSha}"
+                                    sh """
+                                        docker build --platform linux/amd64 \
+                                            -t ${imageTag} \
+                                            ./${svc}
+                                        docker push ${imageTag}
+                                        docker rmi ${imageTag} || true
+                                        echo "✅ Pushed: ${imageTag}"
+                                    """
+                                }
 
                                 // Lưu shortSha để dùng ở stage Deploy
                                 env["TAG_${svc.toUpperCase().replace('-', '_')}"] = shortSha
@@ -176,7 +182,8 @@ pipeline {
 
                         def entries = env.SERVICES_TO_BUILD.split(',').findAll { it }
                         entries.each { entry ->
-                            def parts    = entry.split(':')
+                            // split(':', 2) nhất quán với Build stage
+                            def parts    = entry.split(':', 2)
                             def svc      = parts[0]
                             def envKey   = "TAG_${svc.toUpperCase().replace('-', '_')}"
                             def shortSha = env[envKey]
