@@ -178,6 +178,8 @@ pipeline {
                         variable: 'GH_TOKEN'
                     )]) {
                         sh """
+                            # Dọn thư mục cũ nếu còn sót từ build fail trước
+                            rm -rf yas-gitops
                             git clone https://\${GH_TOKEN}@github.com/thannthai/yas-gitops.git
                             cd yas-gitops
                             git config user.email "jenkins@ci.com"
