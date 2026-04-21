@@ -384,7 +384,7 @@ pipeline {
 
                                 echo "🐳 Build & Push: ${svc}"
                                 sh """
-                                    docker build --platform linux/amd64 \
+                                    docker build --platform linux/arm64 \
                                         -t ${imageFullSha} \
                                         -t ${imageShortSha} \
                                         ./${svc}
