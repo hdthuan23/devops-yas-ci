@@ -28,9 +28,9 @@ pipeline {
                             git config user.email "jenkins@ci.com"
                             git config user.name "Jenkins"
 
-                            # Reset tag về main
-                            sed -i 's|tag:.*|tag: main|' charts/${params.SERVICE}/values.yaml
-                            git add charts/${params.SERVICE}/values.yaml
+                            # Reset tag về main trong values-dev.yaml (chỉ ảnh hưởng namespace dev)
+                            sed -i 's|tag:.*|tag: main|' charts/${params.SERVICE}/values-dev.yaml
+                            git add charts/${params.SERVICE}/values-dev.yaml
 
                             if ! git diff --cached --quiet; then
                                 git commit -m "cleanup: reset ${params.SERVICE} to main"

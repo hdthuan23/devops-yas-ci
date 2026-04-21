@@ -195,9 +195,11 @@ pipeline {
 
                             sh """
                                 cd yas-gitops
-                                sed -i 's|tag:.*|tag: ${shortSha}|' charts/${svc}/values.yaml
-                                git add charts/${svc}/values.yaml
-                                echo "✅ Updated ${svc} → ${shortSha}"
+                                # developer-build chỉ update values-dev.yaml (namespace dev)
+                                # values-staging.yaml do CI pipeline (merge main) quản lý
+                                sed -i 's|tag:.*|tag: ${shortSha}|' charts/${svc}/values-dev.yaml
+                                git add charts/${svc}/values-dev.yaml
+                                echo "✅ Updated ${svc} → ${shortSha} (dev)"
                             """
                         }
 

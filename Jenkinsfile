@@ -404,50 +404,62 @@ pipeline {
 
         // ====================================================================
         // STAGE 8: CD — Update yas-gitops repo để ArgoCD tự sync
+        //
+        // Trigger:
+        //   - Merge vào main     → update values-dev.yaml     → ArgoCD sync namespace dev
+        //   - Git tag v1.2.3     → update values-staging.yaml → ArgoCD sync namespace staging
+        //
+        // values-dev.yaml cũng được cập nhật bởi developer-build job (manual)
         // ====================================================================
         stage('Update GitOps') {
             when {
-                expression { return !changedServices.isEmpty() }
+                expression {
+                    return !changedServices.isEmpty() && (
+                        env.BRANCH_NAME == 'main' ||
+                        (env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/)
+                    )
+                }
             }
             steps {
                 script {
-                    def shortSha = env.GIT_COMMIT.take(7)
+                    def shortSha   = env.GIT_COMMIT.take(7)
+                    def isRelease  = env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/
+                    def imageTag   = isRelease ? env.TAG_NAME : shortSha
+                    def valuesFile = isRelease ? 'values-staging.yaml' : 'values-dev.yaml'
+
+                    echo "🚀 Update ${valuesFile} với tag: ${imageTag}"
 
                     withCredentials([string(
                         credentialsId: 'github-token',
                         variable: 'GH_TOKEN'
                     )]) {
                         sh """
+                            rm -rf yas-gitops
                             git clone https://\${GH_TOKEN}@github.com/thannthai/yas-gitops.git
                             cd yas-gitops
-                            git config user.email "jenkins@ci.com"
-                            git config user.name "Jenkins"
+                            git config user.email \"jenkins@ci.com\"
+                            git config user.name \"Jenkins\"
                         """
 
                         changedServices.each { svc ->
-                            // Chỉ update service nào có Dockerfile (tức là có image)
                             if (!fileExists("${svc}/Dockerfile")) return
 
                             sh """
                                 cd yas-gitops
-
-                                # Update tag trong values.yaml của service
-                                # Dev: dùng branch name để phân biệt môi trường
-                                if [ "${env.BRANCH_NAME}" = "main" ]; then
-                                    sed -i 's|tag:.*|tag: ${shortSha}|' charts/${svc}/values.yaml
-                                    git add charts/${svc}/values.yaml
-                                fi
+                                sed -i 's|tag:.*|tag: ${imageTag}|' charts/${svc}/${valuesFile}
+                                git add charts/${svc}/${valuesFile}
+                                echo "✅ Updated ${svc} → ${imageTag} (${valuesFile})"
                             """
                         }
 
                         sh """
                             cd yas-gitops
-                            # Chỉ commit nếu có thay đổi thật sự
                             if ! git diff --cached --quiet; then
-                                git commit -m "ci: update images to ${shortSha} [${env.BRANCH_NAME}]"
+                                git commit -m "ci: update ${valuesFile} to ${imageTag} [${env.BRANCH_NAME ?: env.TAG_NAME}]"
                                 git push
+                                echo "✅ Pushed to yas-gitops — ArgoCD sẽ tự sync"
                             else
-                                echo "✅ Không có values.yaml nào thay đổi — bỏ qua push"
+                                echo "✅ Không có thay đổi — bỏ qua push"
                             fi
                             cd ..
                             rm -rf yas-gitops
