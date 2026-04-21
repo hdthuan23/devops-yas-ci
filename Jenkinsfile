@@ -387,10 +387,13 @@ pipeline {
                                     docker build --platform linux/arm64 \
                                         -t ${imageFullSha} \
                                         -t ${imageShortSha} \
+                                        -t ${dockerUser}/yas-${svc}:main \
                                         ./${svc}
                                     docker push ${imageFullSha}
                                     docker push ${imageShortSha}
-                                    docker rmi ${imageFullSha} ${imageShortSha} || true
+                                    docker push ${dockerUser}/yas-${svc}:main
+
+                                    docker rmi ${imageFullSha} ${imageShortSha} ${dockerUser}/yas-${svc}:main || true
                                 """
                             }
                         }
