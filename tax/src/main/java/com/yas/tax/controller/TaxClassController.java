@@ -58,6 +58,7 @@ public class TaxClassController {
     public ResponseEntity<TaxClassVm> getTaxClass(@PathVariable("id") final Long id) {
         return ResponseEntity.ok(taxClassService.findById(id));
     }
+    
 
     @PostMapping
     @ApiResponses(value = {
