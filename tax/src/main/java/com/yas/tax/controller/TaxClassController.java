@@ -44,6 +44,7 @@ public class TaxClassController {
         return ResponseEntity.ok(taxClassService.getPageableTaxClasses(pageNo, pageSize));
     }
 
+    
     @GetMapping
     public ResponseEntity<List<TaxClassVm>> listTaxClasses() {
         return ResponseEntity.ok(taxClassService.findAllTaxClasses());
