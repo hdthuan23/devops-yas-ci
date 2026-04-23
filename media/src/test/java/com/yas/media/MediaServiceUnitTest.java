@@ -24,7 +24,10 @@ import com.yas.media.service.MediaServiceImpl;
 import com.yas.media.viewmodel.MediaPostVm;
 import com.yas.media.viewmodel.MediaVm;
 import com.yas.media.viewmodel.NoFileMediaVm;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
+import org.springframework.http.MediaType;
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -246,6 +249,19 @@ class MediaServiceUnitTest {
 
         assertEquals(expectedDto.getMediaType(), mediaDto.getMediaType());
         assertEquals(expectedDto.getContent(), mediaDto.getContent());
+    }
+
+    @Test
+    void getFile_whenMediaFoundAndNameMatches_thenReturnMediaDto() {
+        media.setFilePath("/some/path/file.jpg");
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        InputStream mockStream = new ByteArrayInputStream(new byte[]{1, 2, 3});
+        when(fileSystemRepository.getFile(media.getFilePath())).thenReturn(mockStream);
+
+        MediaDto mediaDto = mediaService.getFile(1L, "file");
+
+        assertNotNull(mediaDto.getContent());
+        assertEquals(MediaType.IMAGE_JPEG, mediaDto.getMediaType());
     }
 
     @Test
