@@ -360,7 +360,7 @@ pipeline {
             }
             steps {
                 script {
-                    def shortSha = env.GIT_COMMIT.take(7)
+                    def shortSha = sh(script: "git rev-parse --short=7 HEAD", returnStdout: true).trim()
 
                     withCredentials([usernamePassword(
                         credentialsId: 'dockerhub-credentials',   // Tên credential trong Jenkins
@@ -425,7 +425,7 @@ pipeline {
             }
             steps {
                 script {
-                    def shortSha   = env.GIT_COMMIT.take(7)
+                    def shortSha   = sh(script: "git rev-parse --short=7 HEAD", returnStdout: true).trim()
                     def isRelease  = env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/
                     def imageTag   = isRelease ? env.TAG_NAME : shortSha
                     def valuesFile = isRelease ? 'values-staging.yaml' : 'values-dev.yaml'
