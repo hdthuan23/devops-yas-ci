@@ -362,6 +362,9 @@ pipeline {
                 script {
                     def shortSha = sh(script: "git rev-parse --short=7 HEAD", returnStdout: true).trim()
 
+                    def isRelease = env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/
+                    def finalTag  = isRelease ? env.TAG_NAME : shortSha
+
                     withCredentials([usernamePassword(
                         credentialsId: 'dockerhub-credentials',   // Tên credential trong Jenkins
                         usernameVariable: 'DOCKER_USER',
@@ -379,7 +382,7 @@ pipeline {
                                 // Lấy DOCKER_USER vào Groovy variable để dùng trong string interpolation
                                 // (withCredentials chỉ bind shell env var, không tự thành Groovy var)
                                 def dockerUser    = env.DOCKER_USER
-                                def imageTag = "${dockerUser}/yas-${svc}:${shortSha}"
+                                def imageTag = "${dockerUser}/yas-${svc}:${finalTag}"
 
                                 echo "🐳 Build & Push: ${svc}"
                                 sh """
