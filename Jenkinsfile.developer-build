@@ -145,7 +145,7 @@ pipeline {
                                     // Lấy DOCKER_USER vào Groovy variable (withCredentials chỉ bind shell env)
                                     def imageTag = "${env.DOCKER_USER}/yas-${svc}:${shortSha}"
                                     sh """
-                                        docker build --platform linux/arm64 \
+                                        docker build --platform linux/amd64 \
                                             -t ${imageTag} \
                                             ./${svc}
                                         docker push ${imageTag}

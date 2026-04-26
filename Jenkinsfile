@@ -383,7 +383,7 @@ pipeline {
 
                                 echo "🐳 Build & Push: ${svc}"
                                 sh """
-                                    docker build --platform linux/arm64 -t ${imageTag} ./${svc}
+                                    docker build --platform linux/amd64 -t ${imageTag} ./${svc}
                                     docker push ${imageTag}
                                     
                                     # Dọn dẹp máy Jenkins sau khi push để tiết kiệm bộ nhớ cho Mac 16GB
