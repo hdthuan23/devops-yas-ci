@@ -360,7 +360,7 @@ pipeline {
             }
             steps {
                 script {
-                    def shortSha = env.GIT_COMMIT.take(7)
+                    def shortSha = sh(script: "git rev-parse --short=7 HEAD", returnStdout: true).trim()
 
                     withCredentials([usernamePassword(
                         credentialsId: 'dockerhub-credentials',   // Tên credential trong Jenkins
@@ -379,21 +379,15 @@ pipeline {
                                 // Lấy DOCKER_USER vào Groovy variable để dùng trong string interpolation
                                 // (withCredentials chỉ bind shell env var, không tự thành Groovy var)
                                 def dockerUser    = env.DOCKER_USER
-                                def imageFullSha  = "${dockerUser}/yas-${svc}:${env.GIT_COMMIT}"
-                                def imageShortSha = "${dockerUser}/yas-${svc}:${shortSha}"
+                                def imageTag = "${dockerUser}/yas-${svc}:${shortSha}"
 
                                 echo "🐳 Build & Push: ${svc}"
                                 sh """
-                                    docker build --platform linux/arm64 \
-                                        -t ${imageFullSha} \
-                                        -t ${imageShortSha} \
-                                        -t ${dockerUser}/yas-${svc}:main \
-                                        ./${svc}
-                                    docker push ${imageFullSha}
-                                    docker push ${imageShortSha}
-                                    docker push ${dockerUser}/yas-${svc}:main
-
-                                    docker rmi ${imageFullSha} ${imageShortSha} ${dockerUser}/yas-${svc}:main || true
+                                    docker build --platform linux/arm64 -t ${imageTag} ./${svc}
+                                    docker push ${imageTag}
+                                    
+                                    # Dọn dẹp máy Jenkins sau khi push để tiết kiệm bộ nhớ cho Mac 16GB
+                                    docker rmi ${imageTag} || true
                                 """
                             }
                         }
@@ -425,7 +419,7 @@ pipeline {
             }
             steps {
                 script {
-                    def shortSha   = env.GIT_COMMIT.take(7)
+                    def shortSha   = sh(script: "git rev-parse --short=7 HEAD", returnStdout: true).trim()
                     def isRelease  = env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/
                     def imageTag   = isRelease ? env.TAG_NAME : shortSha
                     def valuesFile = isRelease ? 'values-staging.yaml' : 'values-dev.yaml'

@@ -31,6 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class TaxClassController {
     private final TaxClassService taxClassService;
 
+    
     public TaxClassController(TaxClassService taxClassService) {
         this.taxClassService = taxClassService;
     }
@@ -44,6 +45,7 @@ public class TaxClassController {
         return ResponseEntity.ok(taxClassService.getPageableTaxClasses(pageNo, pageSize));
     }
 
+    
     @GetMapping
     public ResponseEntity<List<TaxClassVm>> listTaxClasses() {
         return ResponseEntity.ok(taxClassService.findAllTaxClasses());
@@ -58,6 +60,7 @@ public class TaxClassController {
     public ResponseEntity<TaxClassVm> getTaxClass(@PathVariable("id") final Long id) {
         return ResponseEntity.ok(taxClassService.findById(id));
     }
+    
 
     @PostMapping
     @ApiResponses(value = {
