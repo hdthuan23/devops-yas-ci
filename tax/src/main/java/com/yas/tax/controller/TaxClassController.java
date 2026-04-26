@@ -35,6 +35,7 @@ public class TaxClassController {
     public TaxClassController(TaxClassService taxClassService) {
         this.taxClassService = taxClassService;
     }
+    
 
     @GetMapping("/paging")
     public ResponseEntity<TaxClassListGetVm> getPageableTaxClasses(
