@@ -61,7 +61,7 @@ pipeline {
                     // GIT_PREVIOUS_SUCCESSFUL_COMMIT và currentBuild.changeSets hoạt động
                     // đúng trên các lần build tiếp theo) + thêm CloneOption riêng
                     extensions: scm.extensions + [
-                        [$class: 'CloneOption', shallow: false, noTags: true, timeout: 60]
+                        [$class: 'CloneOption', shallow: false, noTags: false, timeout: 60]
                     ]
                 ])
             }
