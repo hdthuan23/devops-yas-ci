@@ -13,7 +13,8 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
     <name>yas</name>
-
+    
+    <!---->
     <modules>
         <module>common-library</module>
         <module>backoffice-bff</module>
