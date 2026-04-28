@@ -61,7 +61,7 @@ pipeline {
                     // GIT_PREVIOUS_SUCCESSFUL_COMMIT và currentBuild.changeSets hoạt động
                     // đúng trên các lần build tiếp theo) + thêm CloneOption riêng
                     extensions: scm.extensions + [
-                        [$class: 'CloneOption', shallow: false, noTags: true, timeout: 60]
+                        [$class: 'CloneOption', shallow: false, noTags: false, timeout: 60]
                     ]
                 ])
             }
@@ -349,7 +349,127 @@ pipeline {
                 }
             }
         }
+
+        // ====================================================================
+        // STAGE 7: DOCKER — Build image & Push lên Docker Hub
+        // Tag = commit SHA (đáp ứng yêu cầu CI: tag bằng commit ID)
+        // ====================================================================
+        stage('Docker Build & Push') {
+            when {
+                expression { return !changedServices.isEmpty() }
+            }
+            steps {
+                script {
+                    def shortSha = sh(script: "git rev-parse --short=7 HEAD", returnStdout: true).trim()
+
+                    def isRelease = env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/
+                    def finalTag  = isRelease ? env.TAG_NAME : shortSha
+
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-credentials',   // Tên credential trong Jenkins
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+                        changedServices.each { svc ->
+                            if (!fileExists("${svc}/Dockerfile")) {
+                                echo "⚠️ ${svc}: không có Dockerfile — bỏ qua Docker build"
+                                return
+                            }
+
+                            stage("Docker ${svc}") {
+                                // Lấy DOCKER_USER vào Groovy variable để dùng trong string interpolation
+                                // (withCredentials chỉ bind shell env var, không tự thành Groovy var)
+                                def dockerUser    = env.DOCKER_USER
+                                def imageTag = "${dockerUser}/yas-${svc}:${finalTag}"
+
+                                echo "🐳 Build & Push: ${svc}"
+                                sh """
+                                    docker build --platform linux/amd64 -t ${imageTag} ./${svc}
+                                    docker push ${imageTag}
+                                    
+                                    # Dọn dẹp máy Jenkins sau khi push để tiết kiệm bộ nhớ cho Mac 16GB
+                                    docker rmi ${imageTag} || true
+                                """
+                            }
+                        }
+
+                        sh 'docker logout'
+                    }
+                }
+            }
+        }
+
+
+        // ====================================================================
+        // STAGE 8: CD — Update yas-gitops repo để ArgoCD tự sync
+        //
+        // Trigger:
+        //   - Merge vào main     → update values-dev.yaml     → ArgoCD sync namespace dev
+        //   - Git tag v1.2.3     → update values-staging.yaml → ArgoCD sync namespace staging
+        //
+        // values-dev.yaml cũng được cập nhật bởi developer-build job (manual)
+        // ====================================================================
+        stage('Update GitOps') {
+            when {
+                expression {
+                    return !changedServices.isEmpty() && (
+                        env.BRANCH_NAME == 'main' ||
+                        (env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/)
+                    )
+                }
+            }
+            steps {
+                script {
+                    def shortSha   = sh(script: "git rev-parse --short=7 HEAD", returnStdout: true).trim()
+                    def isRelease  = env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+/
+                    def imageTag   = isRelease ? env.TAG_NAME : shortSha
+                    def valuesFile = isRelease ? 'values-staging.yaml' : 'values-dev.yaml'
+
+                    echo "🚀 Update ${valuesFile} với tag: ${imageTag}"
+
+                    withCredentials([string(
+                        credentialsId: 'github-token',
+                        variable: 'GH_TOKEN'
+                    )]) {
+                        sh """
+                            rm -rf yas-gitops
+                            git clone https://\${GH_TOKEN}@github.com/thannthai/yas-gitops.git
+                            cd yas-gitops
+                            git config user.email \"jenkins@ci.com\"
+                            git config user.name \"Jenkins\"
+                        """
+
+                        changedServices.each { svc ->
+                            if (!fileExists("${svc}/Dockerfile")) return
+
+                            sh """
+                                cd yas-gitops
+                                sed -i 's|tag:.*|tag: ${imageTag}|' charts/${svc}/${valuesFile}
+                                git add charts/${svc}/${valuesFile}
+                                echo "✅ Updated ${svc} → ${imageTag} (${valuesFile})"
+                            """
+                        }
+
+                        sh """
+                            cd yas-gitops
+                            if ! git diff --cached --quiet; then
+                                git commit -m "ci: update ${valuesFile} to ${imageTag} [${env.BRANCH_NAME ?: env.TAG_NAME}]"
+                                git push
+                                echo "✅ Pushed to yas-gitops — ArgoCD sẽ tự sync"
+                            else
+                                echo "✅ Không có thay đổi — bỏ qua push"
+                            fi
+                            cd ..
+                            rm -rf yas-gitops
+                        """
+                    }
+                }
+            }
+        }
     }
+
 
     // ========================================================================
     // POST — Hành động sau khi pipeline kết thúc
