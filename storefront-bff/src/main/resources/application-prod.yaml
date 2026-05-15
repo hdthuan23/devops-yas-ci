@@ -6,15 +6,8 @@ spring:
           default-filters:
             - SaveSession
           routes:
-            - id: api
-              uri: http://nginx
-              predicates:
-                - Path=/api/**
-              filters:
-                - DedupeResponseHeader=Origin Access-Control-Request-Method Access-Control-Request-Headers
-                - TokenRelay=
-                - StripPrefix=1
             - id: nextjs
-              uri: http://storefront-nextjs:3000
+              uri: ${UI_HOST:http://storefront-nextjs:3000}
+              order: 100
               predicates:
                 - Path=/**
