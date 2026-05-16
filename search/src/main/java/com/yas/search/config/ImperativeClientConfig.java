@@ -1,54 +1,58 @@
 package com.yas.search.config;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.transport.rest5_client.Rest5ClientTransport;
+import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import lombok.RequiredArgsConstructor;
+import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
+import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
+import org.apache.hc.core5.http.HttpHost;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.elasticsearch.client.ClientConfiguration;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchConfiguration;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import java.security.cert.X509Certificate;
 
 @Configuration
 @EnableElasticsearchRepositories(basePackages = "com.yas.search.repository")
 @ComponentScan(basePackages = "com.yas.search.service")
 @RequiredArgsConstructor
-public class ImperativeClientConfig extends ElasticsearchConfiguration {
+public class ImperativeClientConfig {
 
     private final ElasticsearchDataConfig elasticsearchConfig;
 
-    @Override
-    public ClientConfiguration clientConfiguration() {
-        String originalUrl = elasticsearchConfig.getUrl();
-        boolean useSSL = originalUrl.startsWith("https://");
-        String host = originalUrl
-            .replace("https://", "")
-            .replace("http://", "");
-
-        ClientConfiguration.MaybeSecureClientConfigurationBuilder builder =
-            ClientConfiguration.builder().connectedTo(host);
-
-        if (useSSL) {
-            try {
-                // Trust all certificates (disable verification for dev/self-signed certs)
-                SSLContext sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                    public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-                    public void checkServerTrusted(X509Certificate[] certs, String authType) {}
-                }}, null);
-                builder = builder.usingSsl(sslContext);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create SSL context", e);
-            }
+    @Bean
+    public ElasticsearchClient elasticsearchClient() throws Exception {
+        String url = elasticsearchConfig.getUrl();
+        HttpHost httpHost;
+        try {
+            httpHost = HttpHost.create(url);
+        } catch (java.net.URISyntaxException e) {
+            throw new RuntimeException("Invalid Elasticsearch URL: " + url, e);
         }
 
-        return builder
-                .withBasicAuth(elasticsearchConfig.getUsername(),
-                            elasticsearchConfig.getPassword())
-                .build();
+        BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        credentialsProvider.setCredentials(
+            new org.apache.hc.client5.http.auth.AuthScope(httpHost.getHostName(), httpHost.getPort()),
+            new UsernamePasswordCredentials(
+                elasticsearchConfig.getUsername(),
+                elasticsearchConfig.getPassword().toCharArray()));
+
+        Rest5Client rest5Client = Rest5Client.builder(httpHost)
+            .setHttpClientConfigCallback(httpClientBuilder ->
+                httpClientBuilder
+                    .setDefaultCredentialsProvider(credentialsProvider)
+                    .addRequestInterceptorLast((request, entity, context) -> {
+                        // Override vendor media type headers set by ElasticsearchTransportBase
+                        // ES 8.8.1 rejects application/vnd.elasticsearch+json;compatible-with=8
+                        request.removeHeaders("Content-Type");
+                        request.removeHeaders("Accept");
+                        request.addHeader("Content-Type", "application/json");
+                        request.addHeader("Accept", "application/json");
+                    }))
+            .build();
+
+        Rest5ClientTransport transport = new Rest5ClientTransport(rest5Client, new JacksonJsonpMapper());
+        return new ElasticsearchClient(transport);
     }
 }

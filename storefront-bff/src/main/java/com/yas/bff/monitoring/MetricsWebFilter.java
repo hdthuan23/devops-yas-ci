@@ -25,7 +25,7 @@ public class MetricsWebFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         long startTime = System.currentTimeMillis();
         String path = exchange.getRequest().getPath().value();
-        String method = exchange.getRequest().getMethodValue();
+        String method = exchange.getRequest().getMethod().name();
 
         return chain.filter(exchange)
                 .doFinally(signal -> {

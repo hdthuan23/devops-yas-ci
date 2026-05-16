@@ -92,7 +92,7 @@
         {
           "expr": "rate(bff_requests_total[5m])",
           "refId": "A",
-          "legendFormat": "Request Rate (req/s)"
+          "legendFormat": "{{service}} - req/s"
         }
       ],
       "title": "Request Rate (Req/s)",
@@ -175,19 +175,19 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, bff_request_latency_bucket)",
+          "expr": "bff_request_latency_seconds{quantile=\"0.95\"} * 1000",
           "refId": "A",
-          "legendFormat": "p95 Latency"
+          "legendFormat": "p95 - {{service}}"
         },
         {
-          "expr": "histogram_quantile(0.99, bff_request_latency_bucket)",
+          "expr": "bff_request_latency_seconds{quantile=\"0.5\"} * 1000",
           "refId": "B",
-          "legendFormat": "p99 Latency"
+          "legendFormat": "p50 - {{service}}"
         },
         {
-          "expr": "histogram_quantile(0.50, bff_request_latency_bucket)",
+          "expr": "bff_request_latency_seconds{quantile=\"0.99\"} * 1000",
           "refId": "C",
-          "legendFormat": "p50 Latency"
+          "legendFormat": "p99 - {{service}}"
         }
       ],
       "title": "Request Latency (Percentiles)",
@@ -261,7 +261,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(bff_requests_errors[5m])",
+          "expr": "rate(bff_requests_errors_total[5m])",
           "refId": "A",
           "legendFormat": "Error Rate (req/s)"
         }
@@ -338,7 +338,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "(bff_cache_hits / (bff_cache_hits + bff_cache_misses)) * 100",
+          "expr": "(bff_cache_hits_total / (bff_cache_hits_total + bff_cache_misses_total)) * 100",
           "refId": "A",
           "legendFormat": "Cache Hit Ratio"
         }
@@ -347,7 +347,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "schemaVersion": 27,
   "style": "dark",
   "tags": [
@@ -359,12 +359,12 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "BFF - API Gateway Performance",
   "uid": "bff-overview",
-  "version": 0
+  "version": 1
 }

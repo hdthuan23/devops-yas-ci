@@ -20,3 +20,13 @@ scrape_configs:
   static_configs:
   - targets:
     - localhost:9090
+- job_name: backoffice-bff
+  metrics_path: /actuator/prometheus
+  static_configs:
+  - targets:
+    - 'host.docker.internal:8087'
+- job_name: storefront-bff
+  metrics_path: /actuator/prometheus
+  static_configs:
+  - targets:
+    - 'host.docker.internal:8089'

@@ -3,7 +3,6 @@ package com.yas.bff.monitoring;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -13,7 +12,6 @@ import reactor.core.publisher.Mono;
  * Tracks API gateway performance, latency, and error rates
  */
 @Component
-@RequiredArgsConstructor
 public class MetricsCollector {
 
     private final MeterRegistry meterRegistry;

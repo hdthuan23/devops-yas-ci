@@ -27,6 +27,10 @@ spring:
   session:
     store-type: redis
 management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics,prometheus"
   tracing:
     sampling:
       probability: "1.0"
